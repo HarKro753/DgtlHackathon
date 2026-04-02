@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid,
-  PolarAngleAxis, PolarRadiusAxis, AreaChart, Area,
+  PolarAngleAxis, PolarRadiusAxis, AreaChart, Area, ComposedChart,
 } from "recharts";
 import Link from "next/link";
 
@@ -25,11 +25,17 @@ const COLORS = ["#22C55E", "#06B6D4", "#A855F7", "#EAB308", "#EF4444", "#F97316"
 export default function DataPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [loadProfile, setLoadProfile] = useState<any>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/api/dataset`)
       .then((r) => r.json())
       .then(setData)
+      .catch(console.error);
+    fetch(`${API_URL}/api/load-profile`)
+      .then((r) => r.json())
+      .then(setLoadProfile)
       .catch(console.error);
   }, []);
 
@@ -81,6 +87,62 @@ export default function DataPage() {
     { name: "Food waste", kg: 2539 },
   ];
 
+  const nlDemandMonthly = data.netherlands_electricity_demand?.monthly_2025?.map(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (m: any) => ({
+      name: m.name,
+      GWh: m.GWh,
+      avg_GW: m.avg_load_GW,
+      amsterdam_GWh: Math.round(m.GWh * 0.055),
+    })
+  ) || [];
+
+  const seasonalNetLoad = (() => {
+    const s = data.netherlands_electricity_demand?.seasonal_net_load;
+    if (!s) return [];
+    return [
+      { season: "Winter", belly: s.winter.belly_GW, peak: s.winter.peak_GW, ramp: s.winter.evening_ramp_GW },
+      { season: "Spring", belly: s.spring.belly_GW, peak: s.spring.peak_GW, ramp: s.spring.evening_ramp_GW },
+      { season: "Summer", belly: s.summer.belly_GW, peak: s.summer.peak_GW, ramp: s.summer.evening_ramp_GW },
+      { season: "Fall", belly: s.fall.belly_GW, peak: s.fall.peak_GW, ramp: s.fall.evening_ramp_GW },
+    ];
+  })();
+
+  // Amsterdam demand vs renewable capacity curve
+  const amsterdamDemandVsCapacity = (() => {
+    const demand = data.netherlands_electricity_demand?.monthly_2025 || [];
+    const solar = data.solar_irradiance_amsterdam?.monthly || [];
+    // Amsterdam installed solar: ~400 MWp (municipality target), wind: ~100 MW
+    const solarInstalledMWp = 400;
+    const windInstalledMW = 100;
+    const windMonthlyMs = data.wind_data_amsterdam?.monthly_avg_m_per_s || {};
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return demand.map((m: any, i: number) => {
+      const solarMonth = solar[i] || {};
+      // Solar production: MWp * kWh/kWp/day * days / 1000 = MWh/month, then to GWh
+      const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i];
+      const solarGWh = (solarInstalledMWp * (solarMonth.pv_output_kWh_day || 0) * daysInMonth) / 1000;
+
+      // Wind: simplified capacity factor from wind speed (cut-in 3 m/s, rated 12 m/s)
+      const windSpeed = windMonthlyMs[monthNames[i]] || 5.5;
+      const windCF = Math.min(0.45, Math.max(0.05, (windSpeed - 3) / 9 * 0.45));
+      const windGWh = (windInstalledMW * windCF * daysInMonth * 24) / 1000;
+
+      const demandGWh = m.GWh * 0.055; // Amsterdam = 5.5% of NL
+      const renewableGWh = solarGWh + windGWh;
+      const deficit = Math.max(0, demandGWh - renewableGWh);
+
+      return {
+        name: m.name,
+        demand: Math.round(demandGWh),
+        renewable: Math.round(renewableGWh),
+        deficit: Math.round(deficit),
+      };
+    });
+  })();
+
   const perCapita = [
     { name: "Water", value: 13, unit: "L/day" },
     { name: "Food", value: 1.5, unit: "kg/day" },
@@ -118,6 +180,78 @@ export default function DataPage() {
       </header>
 
       <div className="max-w-6xl mx-auto p-6 space-y-8">
+        {/* Amsterdam 365-day load curve */}
+        {loadProfile && (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const dailyData = (loadProfile.amsterdam_daily_MWh || []).map((d: any) => {
+            const date = d.date;
+            const month = parseInt(date.split("-")[1]);
+            const day = parseInt(date.split("-")[2]);
+            // Amsterdam renewable capacity: ~400 MWp solar + 100 MW wind
+            // Estimate daily renewable production from solar irradiance + wind
+            const solarMonthly = data?.solar_irradiance_amsterdam?.monthly || [];
+            const solarMonth = solarMonthly[month - 1] || {};
+            const solarMWh = (400 * (solarMonth.pv_output_kWh_day || 0)) / 1000; // MWp * kWh/kWp = kWh, /1000 = MWh
+            const windMonthlyMs = data?.wind_data_amsterdam?.monthly_avg_m_per_s || {};
+            const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const windSpeed = windMonthlyMs[monthNames[month-1]] || 5.5;
+            const windCF = Math.min(0.45, Math.max(0.05, (windSpeed - 3) / 9 * 0.45));
+            const windMWh = (100 * windCF * 24) / 1000;
+            const renewableMWh = (solarMWh + windMWh) * 1000; // back to MWh (the solar calc was wrong scale)
+            // Actually: 400 MWp * pv_output_kWh_day per kWp = MWh total. Already in MWh.
+            const actualRenewable = 400 * (solarMonth.pv_output_kWh_day || 0) + 100 * windCF * 24;
+            const demandMWh = d.MWh;
+            const deficit = Math.max(0, demandMWh - actualRenewable);
+
+            return {
+              label: `${monthNames[month-1]} ${day}`,
+              date: date,
+              demand: demandMWh,
+              renewable: Math.round(actualRenewable),
+              deficit: Math.round(deficit),
+            };
+          });
+
+          // Sample every 3rd day for readability (365 → ~122 points)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const sampled = dailyData.filter((_: any, i: number) => i % 3 === 0);
+
+          return (
+            <Section title="Amsterdam — 365-Day Electricity Demand vs Renewable Capacity (NEDU 2025)">
+              <ResponsiveContainer width="100%" height={350}>
+                <ComposedChart data={sampled} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="label" tick={{ fill: "#9CA3AF", fontSize: 9 }} interval={9} angle={-45} textAnchor="end" height={50} />
+                  <YAxis tick={{ fill: "#9CA3AF", fontSize: 11 }} unit=" MWh" />
+                  <Tooltip contentStyle={{ backgroundColor: "#1F2937", border: "1px solid #374151", borderRadius: 8 }} />
+                  <Area type="monotone" dataKey="deficit" name="Deficit (fossil needed)" fill="#EF4444" fillOpacity={0.3} stroke="none" />
+                  <Line type="monotone" dataKey="demand" name="Demand (MWh/day)" stroke="#F97316" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="renewable" name="Renewable capacity (MWh/day)" stroke="#22C55E" strokeWidth={2} dot={false} strokeDasharray="6 3" />
+                </ComposedChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-5 text-xs mt-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-0.5 bg-orange-500 rounded" />
+                  <span className="text-gray-400">Demand</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-0.5 rounded" style={{ borderBottom: "2px dashed #22C55E" }} />
+                  <span className="text-gray-400">Renewable capacity</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-3 bg-red-500/30 rounded" />
+                  <span className="text-gray-400">Deficit (fossil/import required)</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                Source: NEDU Standaardprofielen 2025 (E1A household profile) scaled to Amsterdam city load (~6.1 TWh/year).
+                Renewable: ~400 MWp solar + ~100 MW wind installed capacity.
+                Red area = energy that must come from fossil gas, imports, or hydrogen.
+              </p>
+            </Section>
+          );
+        })()}
+
         {/* Solar + Wind side by side */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Section title="Solar Irradiance — Amsterdam (PVGIS)">
@@ -177,6 +311,38 @@ export default function DataPage() {
           </ResponsiveContainer>
           <p className="text-xs text-gray-500 mt-2">This is why month matters — a June festival has 50% grid renewable vs 28% in December.</p>
         </Section>
+
+        {/* NL Demand + Duck Curve */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Section title="Netherlands Monthly Demand (CBS, 2025)">
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={nlDemandMonthly}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="name" tick={{ fill: "#9CA3AF", fontSize: 11 }} />
+                <YAxis tick={{ fill: "#9CA3AF", fontSize: 11 }} unit=" GWh" />
+                <Tooltip contentStyle={{ backgroundColor: "#1F2937", border: "1px solid #374151", borderRadius: 8 }} />
+                <Bar dataKey="GWh" name="NL Total (GWh)" fill="#06B6D4" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="amsterdam_GWh" name="Amsterdam est. (GWh)" fill="#A855F7" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <p className="text-xs text-gray-500 mt-2">Winter ~21% higher than summer.</p>
+          </Section>
+
+          <Section title="Seasonal Net Load — Duck Curve">
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={seasonalNetLoad}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis dataKey="season" tick={{ fill: "#9CA3AF", fontSize: 11 }} />
+                <YAxis tick={{ fill: "#9CA3AF", fontSize: 11 }} unit=" GW" />
+                <Tooltip contentStyle={{ backgroundColor: "#1F2937", border: "1px solid #374151", borderRadius: 8 }} />
+                <Bar dataKey="belly" name="Midday belly (GW)" fill="#22C55E" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="peak" name="Evening peak (GW)" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="ramp" name="Evening ramp (GW)" fill="#EAB308" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <p className="text-xs text-gray-500 mt-2">Summer evening ramp: 6.0 GW — when batteries and H₂ are most valuable.</p>
+          </Section>
+        </div>
 
         {/* DGTL Material Flow */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

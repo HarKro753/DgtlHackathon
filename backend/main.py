@@ -47,3 +47,12 @@ async def plan(request: PlanRequest) -> PlanResponse:
 @app.get("/api/dataset")
 async def get_dataset() -> dict:
     return load_dataset()
+
+
+@app.get("/api/load-profile")
+async def load_profile() -> dict:
+    import json
+    from pathlib import Path
+    path = Path(__file__).parent / "data" / "amsterdam_load_profile.json"
+    with open(path) as f:
+        return json.load(f)

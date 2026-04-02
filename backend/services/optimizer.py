@@ -13,6 +13,7 @@ from services.grid import check_grid_capacity
 from services.dispatch import compute_hourly_mix
 from services.infrastructure import auto_h2_generators, auto_battery_count, h2_for_visitor_target
 from services.nudges import generate_nudges
+from services.dataset import load_load_profile
 from utils.energy import (
     HYDROGEN_GENERATOR_KW,
     HOURS_PER_DAY,
@@ -25,6 +26,8 @@ from utils.energy import (
     find_max_grid_for_renewable_target,
     grid_renewable_share,
     get_hourly_prices,
+    get_amsterdam_monthly_avg_demand_mwh,
+    get_nedu_hourly_profile,
 )
 
 HYDROGEN_GENERATOR_COST_EUR = 50000
@@ -122,8 +125,13 @@ def compute_festival_plan(
         for name, kwh in [("Grid (renewable)", grid_ren), ("Grid (fossil)", grid_fos), ("Hydrogen", h2_kwh), ("Battery", bat_kwh)]:
             sources.append(EnergySource(name=name, capacity_kWh=round(kwh * duration_days, 1), share_percent=round(kwh / total_daily * 100, 1)))
 
-    # --- Hourly dispatch ---
-    hourly_mix = compute_hourly_mix(total_daily, grid_kw, h2_units * HYDROGEN_GENERATOR_KW, bat_kwh, hourly_prices, ren_share)
+    # --- Hourly dispatch (using NEDU profile shape for the month) ---
+    load_profile = load_load_profile()
+    nedu_hourly = get_nedu_hourly_profile(month, load_profile)
+    amsterdam_daily_demand = get_amsterdam_monthly_avg_demand_mwh(month, load_profile)
+
+    hourly_mix = compute_hourly_mix(total_daily, grid_kw, h2_units * HYDROGEN_GENERATOR_KW, bat_kwh, hourly_prices, ren_share,
+                                    nedu_profile=nedu_hourly)
 
     # --- Resources ---
     water_pp = consumption.get("water_per_person_per_day_liters", {}).get("total_incl_sanitation_mid", 13)

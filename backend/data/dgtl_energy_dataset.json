@@ -7,6 +7,53 @@
     "description": "Mock dataset compiled from real Dutch/European energy sources"
   },
 
+  "netherlands_electricity_demand": {
+    "source": "CBS (Table 84575ENG), Electricity Maps Grid-in-Review 2025",
+    "source_urls": [
+      "https://www.cbs.nl/en-gb/figures/detail/84575ENG",
+      "https://www.electricitymaps.com/grid-in-review-2025/the-netherlands"
+    ],
+    "annual_total_TWh_2025": 113.0,
+    "monthly_2025": [
+      { "month": 1,  "name": "Jan", "GWh": 10791, "avg_load_GW": 14.50 },
+      { "month": 2,  "name": "Feb", "GWh": 9669,  "avg_load_GW": 14.39 },
+      { "month": 3,  "name": "Mar", "GWh": 9325,  "avg_load_GW": 12.53 },
+      { "month": 4,  "name": "Apr", "GWh": 8575,  "avg_load_GW": 11.91 },
+      { "month": 5,  "name": "May", "GWh": 8921,  "avg_load_GW": 11.99 },
+      { "month": 6,  "name": "Jun", "GWh": 8949,  "avg_load_GW": 12.43 },
+      { "month": 7,  "name": "Jul", "GWh": 9280,  "avg_load_GW": 12.47 },
+      { "month": 8,  "name": "Aug", "GWh": 8937,  "avg_load_GW": 12.01 },
+      { "month": 9,  "name": "Sep", "GWh": 8886,  "avg_load_GW": 12.34 },
+      { "month": 10, "name": "Oct", "GWh": 9564,  "avg_load_GW": 12.85 },
+      { "month": 11, "name": "Nov", "GWh": 9872,  "avg_load_GW": 13.71 },
+      { "month": 12, "name": "Dec", "GWh": 10252, "avg_load_GW": 13.78 }
+    ],
+    "grid_stats": {
+      "peak_demand_GW": 18.6,
+      "peak_demand_hour": "12:00",
+      "peak_record_GW": 26.9,
+      "peak_record_date": "2025-06-12",
+      "min_demand_GW": 9.8,
+      "min_demand_hour": "02:00",
+      "weekday_avg_GW": 14.0,
+      "weekend_avg_GW": 12.8,
+      "overall_avg_GW": 12.9
+    },
+    "seasonal_net_load": {
+      "description": "Net load = demand minus wind/solar. Shows the duck curve.",
+      "winter": { "belly_GW": 7.2, "belly_hour": "02:00", "peak_GW": 11.0, "peak_hour": "17:00", "evening_ramp_GW": 3.8 },
+      "spring": { "belly_GW": 3.4, "belly_hour": "12:00", "peak_GW": 8.8, "peak_hour": "18:00", "evening_ramp_GW": 5.4 },
+      "summer": { "belly_GW": 2.9, "belly_hour": "11:00", "peak_GW": 8.9, "peak_hour": "19:00", "evening_ramp_GW": 6.0 },
+      "fall":   { "belly_GW": 5.4, "belly_hour": "01:00", "peak_GW": 9.0, "peak_hour": "17:00", "evening_ramp_GW": 3.6 }
+    },
+    "amsterdam_estimate": {
+      "population_share_percent": 5.5,
+      "annual_TWh": 6.1,
+      "avg_load_MW": 700,
+      "notes": "Amsterdam ~5.5% of NL population but higher commercial density. Estimate: 5.5% of national."
+    }
+  },
+
   "solar_irradiance_amsterdam": {
     "source": "PVGIS 5.2 API (EU JRC) - SARAH2 database, 2005-2020 average",
     "source_url": "https://re.jrc.ec.europa.eu/pvg_tools/en/",

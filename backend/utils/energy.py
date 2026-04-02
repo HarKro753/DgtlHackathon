@@ -115,6 +115,37 @@ def get_wind_speed(month: int, dataset: dict) -> float:
     return monthly.get(name, 5.5)
 
 
+def get_amsterdam_daily_demand_mwh(month: int, day: int, load_profile: dict) -> float:
+    """Get Amsterdam daily demand in MWh for a specific date from NEDU data."""
+    daily_data = load_profile.get("amsterdam_daily_MWh", [])
+    target = f"2025-{month:02d}-{day:02d}"
+    for entry in daily_data:
+        if entry["date"] == target:
+            return entry["MWh"]
+    # Fallback: average for the month
+    month_entries = [e for e in daily_data if e["date"].startswith(f"2025-{month:02d}")]
+    if month_entries:
+        return sum(e["MWh"] for e in month_entries) / len(month_entries)
+    return 16700  # annual average
+
+
+def get_amsterdam_monthly_avg_demand_mwh(month: int, load_profile: dict) -> float:
+    """Get Amsterdam average daily demand in MWh for a given month."""
+    daily_data = load_profile.get("amsterdam_daily_MWh", [])
+    month_entries = [e for e in daily_data if e["date"].startswith(f"2025-{month:02d}")]
+    if month_entries:
+        return sum(e["MWh"] for e in month_entries) / len(month_entries)
+    return 16700
+
+
+def get_nedu_hourly_profile(month: int, load_profile: dict) -> dict[str, float]:
+    """Get the NEDU hourly consumption profile for a month (kWh per household).
+    Returns hour -> kWh.
+    """
+    profiles = load_profile.get("monthly_hourly_profiles_kWh_per_household", {})
+    return profiles.get(str(month), {})
+
+
 def get_hourly_prices(month: int, dataset: dict) -> dict[str, float]:
     """Get hourly prices for the appropriate season."""
     prices = dataset.get("electricity_prices_netherlands", {})

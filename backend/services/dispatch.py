@@ -10,43 +10,57 @@ def compute_hourly_mix(
     battery_capacity_kwh: float,
     prices: dict[str, float],
     ren_share: float = 0.40,
+    nedu_profile: dict[str, float] | None = None,
 ) -> list[dict]:
-    """Dispatch energy sources per hour based on merit order:
-    1. Grid is always-on base load
-    2. Hydrogen kicks in when demand exceeds grid OR grid price > 100 €/MWh
-    3. Battery discharges during peaks, charges during surplus
+    """Dispatch energy sources per hour based on merit order.
+
+    If nedu_profile is provided, uses the NEDU consumption shape for the month
+    instead of the hardcoded demand weights. This gives a real-data-backed
+    demand curve that varies by month.
     """
-    hours = sorted(DEMAND_WEIGHTS.keys())
+    # Use NEDU profile shape if available, otherwise fall back to hardcoded weights
+    if nedu_profile and len(nedu_profile) > 0:
+        # NEDU profile is kWh per household per hour — use as relative weights
+        weights = {}
+        for hour_str, kwh in nedu_profile.items():
+            # Only include festival operating hours (10:00-23:00)
+            h = int(hour_str.split(":")[0])
+            if 10 <= h <= 23:
+                weights[hour_str] = kwh
+        if not weights:
+            weights = DEMAND_WEIGHTS
+        total_weight = sum(weights.values())
+    else:
+        weights = DEMAND_WEIGHTS
+        total_weight = DEMAND_TOTAL_WEIGHT
+
+    hours = sorted(weights.keys())
     result = []
     battery_soc = battery_capacity_kwh * 0.5
 
     for hour in hours:
-        demand = (DEMAND_WEIGHTS[hour] / DEMAND_TOTAL_WEIGHT) * daily_demand_kwh
+        demand = (weights[hour] / total_weight) * daily_demand_kwh
         price = prices.get(hour, 80)
 
         grid_used = min(demand, grid_kw)
         remaining = demand - grid_used
         h2_used = 0.0
 
-        # High price: shift grid load to hydrogen
         if price > 100 and hydrogen_kw > 0:
             h2_shift = min(grid_used * 0.5, hydrogen_kw)
             grid_used -= h2_shift
             h2_used += h2_shift
 
-        # Hydrogen covers remaining
         if remaining > 0:
             h2_add = min(remaining, hydrogen_kw - h2_used)
             h2_used += h2_add
             remaining -= h2_add
 
-        # Battery covers peaks
         battery_used = 0.0
         if remaining > 0 and battery_soc > 0:
             battery_used = min(remaining, battery_soc, battery_capacity_kwh * 0.25)
             battery_soc -= battery_used
 
-        # Charge battery from surplus
         surplus = (grid_kw + hydrogen_kw) - demand
         if surplus > 0 and battery_soc < battery_capacity_kwh:
             battery_soc += min(surplus * 0.5, battery_capacity_kwh - battery_soc)
