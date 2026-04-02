@@ -25,10 +25,10 @@ frontend/
 
 ## Skills — Read Before Implementing
 
-| Skill | Use when |
-|---|---|
+| Skill                            | Use when                                       |
+| -------------------------------- | ---------------------------------------------- |
 | `.claude/skills/python-fastapi/` | FastAPI patterns, Pydantic v2, async endpoints |
-| `.claude/skills/openstreetmap/` | Map integration, geocoding, area selection |
+| `.claude/skills/openstreetmap/`  | Map integration, geocoding, area selection     |
 
 ---
 
