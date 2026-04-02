@@ -9,9 +9,9 @@ class EnergySource(BaseModel):
 
 class Nudge(BaseModel):
     message: str
-    action: str  # e.g. "hydrogen_generators" — which parameter to change
-    value: int | float  # suggested new value
-    impact: str  # e.g. "renewable: 50% → 75%"
+    action: str
+    value: int | float
+    impact: str
 
 
 class EnergyBreakdown(BaseModel):
@@ -20,11 +20,13 @@ class EnergyBreakdown(BaseModel):
     sources: list[EnergySource]
     hydrogen_generators: int
     hydrogen_capacity_kWh: float
+    solar_panels: int
+    solar_daily_kWh: float
     battery_units: int
     battery_capacity_kWh: float
     grid_kw: int
     renewable_percent: float
-    hourly_mix: list[dict] = Field(default_factory=list, description="Per-hour breakdown: [{hour, grid_renewable, grid_fossil, hydrogen, battery, demand, price}]")
+    hourly_mix: list[dict] = Field(default_factory=list)
 
 
 class ResourceBreakdown(BaseModel):
@@ -42,6 +44,7 @@ class ResourceBreakdown(BaseModel):
 
 class CostEstimate(BaseModel):
     hydrogen_generators_eur: float
+    solar_panels_eur: float
     batteries_eur: float
     grid_connection_eur: float
     total_eur: float

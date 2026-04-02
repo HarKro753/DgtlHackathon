@@ -45,7 +45,7 @@ export function TweakPanel({ plan, onTweak }: TweakPanelProps) {
   const [overrides, setOverrides] = useState<Overrides>({
     hydrogen_generators: null,
     battery_units: null,
-    grid_kw: null,
+    solar_panels: null,
     m2_per_person: null,
   });
 
@@ -73,8 +73,8 @@ export function TweakPanel({ plan, onTweak }: TweakPanelProps) {
         <button onClick={() => setExpanded(false)} className="text-xs text-gray-500 hover:text-gray-300">collapse</button>
       </div>
       <SliderRow label="H₂ Generators" value={overrides.hydrogen_generators} defaultValue={plan.energy.hydrogen_generators} min={0} max={20} step={1} unit="units" onChange={(v) => update("hydrogen_generators", v)} />
+      <SliderRow label="Solar Panels (400W)" value={overrides.solar_panels} defaultValue={plan.energy.solar_panels} min={0} max={5000} step={50} unit="panels" onChange={(v) => update("solar_panels", v)} />
       <SliderRow label="Batteries" value={overrides.battery_units} defaultValue={plan.energy.battery_units} min={0} max={300} step={5} unit="units" onChange={(v) => update("battery_units", v)} />
-      <SliderRow label="Grid capacity" value={overrides.grid_kw} defaultValue={plan.energy.grid_kw} min={0} max={2000} step={50} unit="kW" onChange={(v) => update("grid_kw", v)} />
       <SliderRow label="Space per person" value={overrides.m2_per_person} defaultValue={1.0} min={0.5} max={5} step={0.1} unit="m²" onChange={(v) => update("m2_per_person", v)} />
     </div>
   );

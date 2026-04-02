@@ -152,10 +152,14 @@ export function ResultPanel({ plan, loading, error, polygon, onApplyNudge }: Res
           {/* Source mix + infrastructure */}
           <div className="space-y-4">
             <EnergySourceChart plan={plan} />
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-center text-xs">
               <div className="bg-gray-800/50 rounded p-2">
                 <div className="text-lg font-bold text-cyan-400">{plan.energy.hydrogen_generators}</div>
                 <div className="text-gray-500">H₂ gen</div>
+              </div>
+              <div className="bg-gray-800/50 rounded p-2">
+                <div className="text-lg font-bold text-yellow-400">{plan.energy.solar_panels}</div>
+                <div className="text-gray-500">solar panels</div>
               </div>
               <div className="bg-gray-800/50 rounded p-2">
                 <div className="text-lg font-bold text-purple-400">{plan.energy.battery_units}</div>
@@ -187,6 +191,7 @@ export function ResultPanel({ plan, loading, error, polygon, onApplyNudge }: Res
           <h3 className="text-sm font-semibold text-gray-400 mb-2">Cost</h3>
           <div className="bg-gray-800 rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-gray-400">H₂ generators</span><span>€{fmt(plan.cost.hydrogen_generators_eur)}</span></div>
+            {plan.cost.solar_panels_eur > 0 && <div className="flex justify-between"><span className="text-gray-400">Solar panels</span><span>€{fmt(plan.cost.solar_panels_eur)}</span></div>}
             <div className="flex justify-between"><span className="text-gray-400">Batteries</span><span>€{fmt(plan.cost.batteries_eur)}</span></div>
             <div className="flex justify-between"><span className="text-gray-400">Grid connection</span><span>€{fmt(plan.cost.grid_connection_eur)}</span></div>
             <div className="border-t border-gray-700 pt-2 flex justify-between font-bold"><span>Total</span><span>€{fmt(plan.cost.total_eur)}</span></div>

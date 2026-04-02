@@ -7,6 +7,7 @@ export interface EnergySource {
 export interface HourlyMix {
   hour: string;
   demand: number;
+  solar?: number;
   grid_renewable: number;
   grid_fossil: number;
   hydrogen: number;
@@ -27,6 +28,8 @@ export interface EnergyBreakdown {
   sources: EnergySource[];
   hydrogen_generators: number;
   hydrogen_capacity_kWh: number;
+  solar_panels: number;
+  solar_daily_kWh: number;
   battery_units: number;
   battery_capacity_kWh: number;
   grid_kw: number;
@@ -49,6 +52,7 @@ export interface ResourceBreakdown {
 
 export interface CostEstimate {
   hydrogen_generators_eur: number;
+  solar_panels_eur: number;
   batteries_eur: number;
   grid_connection_eur: number;
   total_eur: number;
@@ -78,13 +82,13 @@ export interface PlanRequest {
   target_renewable_percent?: number | null;
   hydrogen_generators?: number | null;
   battery_units?: number | null;
-  grid_kw?: number | null;
+  solar_panels?: number | null;
   m2_per_person?: number | null;
 }
 
 export interface Overrides {
   hydrogen_generators: number | null;
   battery_units: number | null;
-  grid_kw: number | null;
+  solar_panels: number | null;
   m2_per_person: number | null;
 }

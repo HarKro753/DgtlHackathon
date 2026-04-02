@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  AreaChart,
   Area,
   XAxis,
   YAxis,
@@ -10,7 +9,6 @@ import {
   ResponsiveContainer,
   Line,
   ComposedChart,
-  Legend,
 } from "recharts";
 import type { FestivalPlan } from "@/types/festival";
 
@@ -19,14 +17,26 @@ interface EnergyChartProps {
 }
 
 export function EnergyChart({ plan }: EnergyChartProps) {
+  const hasSolar = plan.energy.solar_panels > 0;
+
   const data = plan.energy.hourly_mix.map((h) => ({
     hour: h.hour.slice(0, 5),
+    ...(hasSolar ? { Solar: h.solar || 0 } : {}),
     "Grid (renewable)": h.grid_renewable,
     "Grid (fossil)": h.grid_fossil,
     Hydrogen: h.hydrogen,
     Battery: h.battery,
     price: h.price,
   }));
+
+  const legendItems = [
+    ...(hasSolar ? [{ name: "Solar", color: "#EAB308" }] : []),
+    { name: "Grid (renewable)", color: "#22C55E" },
+    { name: "Grid (fossil)", color: "#EF4444" },
+    { name: "Hydrogen", color: "#06B6D4" },
+    { name: "Battery", color: "#A855F7" },
+    { name: "Grid price", color: "#FCD34D" },
+  ];
 
   return (
     <div>
@@ -42,6 +52,7 @@ export function EnergyChart({ plan }: EnergyChartProps) {
               contentStyle={{ backgroundColor: "#1F2937", border: "1px solid #374151", borderRadius: 8, fontSize: 12 }}
               labelStyle={{ color: "#9CA3AF" }}
             />
+            {hasSolar && <Area yAxisId="left" type="monotone" dataKey="Solar" stackId="1" stroke="#EAB308" fill="#EAB308" fillOpacity={0.8} />}
             <Area yAxisId="left" type="monotone" dataKey="Grid (renewable)" stackId="1" stroke="#22C55E" fill="#22C55E" fillOpacity={0.8} />
             <Area yAxisId="left" type="monotone" dataKey="Grid (fossil)" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.8} />
             <Area yAxisId="left" type="monotone" dataKey="Hydrogen" stackId="1" stroke="#06B6D4" fill="#06B6D4" fillOpacity={0.8} />
@@ -50,13 +61,7 @@ export function EnergyChart({ plan }: EnergyChartProps) {
           </ComposedChart>
         </ResponsiveContainer>
         <div className="flex flex-wrap justify-center gap-3 text-xs mt-2">
-          {[
-            { name: "Grid (renewable)", color: "#22C55E" },
-            { name: "Grid (fossil)", color: "#EF4444" },
-            { name: "Hydrogen", color: "#06B6D4" },
-            { name: "Battery", color: "#A855F7" },
-            { name: "Grid price", color: "#FCD34D" },
-          ].map((item) => (
+          {legendItems.map((item) => (
             <div key={item.name} className="flex items-center gap-1">
               <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: item.color }} />
               <span className="text-gray-400">{item.name}</span>

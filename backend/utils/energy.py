@@ -115,6 +115,35 @@ def get_wind_speed(month: int, dataset: dict) -> float:
     return monthly.get(name, 5.5)
 
 
+def solar_daily_kwh(panel_count: int, month: int, dataset: dict) -> float:
+    """Daily solar output in kWh from N panels for a given month. Uses PVGIS Amsterdam data."""
+    if panel_count == 0:
+        return 0
+    solar_data = dataset.get("solar_irradiance_amsterdam", {})
+    monthly = solar_data.get("monthly", [])
+    month_data = next((m for m in monthly if m["month"] == month), None)
+    if not month_data:
+        return 0
+    kwh_per_kwp_per_day = month_data["pv_output_kWh_day"]
+    kwp = (panel_count * 400) / 1000  # 400W panels
+    return kwp * kwh_per_kwp_per_day
+
+
+def solar_hourly_kwh(daily_total: float) -> dict[str, float]:
+    """Distribute daily solar output across hours using a bell curve peaking at 13:00.
+    Only produces during daylight hours.
+    """
+    if daily_total <= 0:
+        return {}
+    weights = {
+        "07:00": 0.02, "08:00": 0.05, "09:00": 0.09, "10:00": 0.12,
+        "11:00": 0.14, "12:00": 0.15, "13:00": 0.15, "14:00": 0.13,
+        "15:00": 0.09, "16:00": 0.04, "17:00": 0.02,
+    }
+    total_weight = sum(weights.values())
+    return {h: round((w / total_weight) * daily_total, 1) for h, w in weights.items()}
+
+
 def get_amsterdam_daily_demand_mwh(month: int, day: int, load_profile: dict) -> float:
     """Get Amsterdam daily demand in MWh for a specific date from NEDU data."""
     daily_data = load_profile.get("amsterdam_daily_MWh", [])

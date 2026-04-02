@@ -38,7 +38,7 @@ async def plan(request: PlanRequest) -> PlanResponse:
         target_renewable_percent=request.target_renewable_percent,
         hydrogen_generators_override=request.hydrogen_generators,
         battery_units_override=request.battery_units,
-        grid_kw_override=request.grid_kw,
+        solar_panels_override=request.solar_panels,
         m2_per_person_override=request.m2_per_person,
     )
     return PlanResponse(plan=result)

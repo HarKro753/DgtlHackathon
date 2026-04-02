@@ -18,5 +18,6 @@ export const SOURCE_COLORS: Record<string, string> = {
   "Grid (renewable)": "#22C55E",
   "Grid (fossil)": "#EF4444",
   Hydrogen: "#06B6D4",
+  Solar: "#EAB308",
   Battery: "#A855F7",
 };

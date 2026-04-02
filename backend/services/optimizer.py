@@ -26,11 +26,13 @@ from utils.energy import (
     find_max_grid_for_renewable_target,
     grid_renewable_share,
     get_hourly_prices,
-    get_amsterdam_monthly_avg_demand_mwh,
     get_nedu_hourly_profile,
+    solar_daily_kwh,
+    solar_hourly_kwh,
 )
 
 HYDROGEN_GENERATOR_COST_EUR = 50000
+SOLAR_PANEL_COST_EUR = 150  # per 400W panel
 
 
 def compute_festival_plan(
@@ -41,41 +43,50 @@ def compute_festival_plan(
     target_renewable_percent: float | None = None,
     hydrogen_generators_override: int | None = None,
     battery_units_override: int | None = None,
-    grid_kw_override: int | None = None,
+    solar_panels_override: int | None = None,
     m2_per_person_override: float | None = None,
     _skip_nudges: bool = False,
 ) -> FestivalPlan:
     grid = check_grid_capacity(lat, lng, dataset)
     consumption = dataset.get("festival_resource_consumption", {})
 
-    # Month-dependent values from dataset
     ren_share = grid_renewable_share(month)
     hourly_prices = get_hourly_prices(month, dataset)
 
-    grid_kw = grid_kw_override if grid_kw_override is not None else grid["grid_available_kw"]
+    # Grid capacity comes from data, not user override
+    grid_kw = grid["grid_available_kw"]
     m2_pp = m2_per_person_override if m2_per_person_override is not None else 1.0
     stage_kwh = stage_energy(area_m2)
 
-    # --- Infrastructure (fixed, area-based) ---
+    # --- Infrastructure ---
     h2_units = hydrogen_generators_override if hydrogen_generators_override is not None else auto_h2_generators(area_m2)
     bat_count = battery_units_override if battery_units_override is not None else auto_battery_count(grid_kw, h2_units)
+    panel_count = solar_panels_override if solar_panels_override is not None else 0  # default: no solar
 
+    # --- Energy supply ---
     grid_kwh, h2_kwh, bat_kwh = daily_supply(grid_kw, h2_units, bat_count, duration_days)
-    total_daily = grid_kwh + h2_kwh + bat_kwh
+
+    # Solar: 100% renewable, varies by month (from PVGIS data)
+    solar_kwh = solar_daily_kwh(panel_count, month, dataset)
+    solar_hourly = solar_hourly_kwh(solar_kwh)
+
+    total_daily = grid_kwh + h2_kwh + bat_kwh + solar_kwh
     space_limit = max_visitors_from_space(area_m2, m2_pp)
+
+    # Renewable calc: solar is 100% renewable, hydrogen is 100%, grid is partial
+    renewable_pct = calc_renewable_percent(grid_kwh, h2_kwh + solar_kwh, bat_kwh, ren_share)
 
     if mode == "visitors":
         ren_target = target_renewable_percent if target_renewable_percent is not None else 50.0
-        current_pct = calc_renewable_percent(grid_kwh, h2_kwh, bat_kwh, ren_share)
 
-        if current_pct >= ren_target:
+        if renewable_pct >= ren_target:
             usable_daily = total_daily
         else:
-            usable_grid_kw = find_max_grid_for_renewable_target(grid_kw, h2_kwh, bat_kwh, ren_target, ren_share)
+            usable_grid_kw = find_max_grid_for_renewable_target(grid_kw, h2_kwh + solar_kwh, bat_kwh, ren_target, ren_share)
             grid_kwh = usable_grid_kw * HOURS_PER_DAY
-            usable_daily = grid_kwh + h2_kwh + bat_kwh
+            usable_daily = grid_kwh + h2_kwh + bat_kwh + solar_kwh
 
-        renewable_pct = calc_renewable_percent(grid_kwh, h2_kwh, bat_kwh, ren_share)
+        renewable_pct = calc_renewable_percent(grid_kwh, h2_kwh + solar_kwh, bat_kwh, ren_share)
         available = max(0, usable_daily - stage_kwh)
         max_vis = min(max_visitors_from_energy(available), space_limit)
 
@@ -83,15 +94,15 @@ def compute_festival_plan(
         vis_target = target_visitors if target_visitors is not None else 20000
 
         if hydrogen_generators_override is None:
-            h2_units = h2_for_visitor_target(vis_target, stage_kwh, grid_kwh, bat_kwh)
+            h2_units = h2_for_visitor_target(vis_target, stage_kwh, grid_kwh + solar_kwh, bat_kwh)
             grid_kwh, h2_kwh, bat_kwh = daily_supply(grid_kw, h2_units, bat_count, duration_days)
-            total_daily = grid_kwh + h2_kwh + bat_kwh
+            total_daily = grid_kwh + h2_kwh + bat_kwh + solar_kwh
 
-        renewable_pct = calc_renewable_percent(grid_kwh, h2_kwh, bat_kwh, ren_share)
+        renewable_pct = calc_renewable_percent(grid_kwh, h2_kwh + solar_kwh, bat_kwh, ren_share)
         available = max(0, total_daily - stage_kwh)
         max_vis = min(max_visitors_from_energy(available), space_limit, vis_target)
 
-    total_daily = grid_kwh + h2_kwh + bat_kwh
+    total_daily = grid_kwh + h2_kwh + bat_kwh + solar_kwh
 
     # --- Nudges ---
     if _skip_nudges:
@@ -102,7 +113,7 @@ def compute_festival_plan(
                 lat, lng, area_m2, duration_days, month, dataset,
                 mode=mode, target_renewable_percent=ren_target, target_visitors=vis_target,
                 hydrogen_generators_override=h2_override, battery_units_override=bat_override,
-                grid_kw_override=grid_override, m2_per_person_override=m2_override,
+                solar_panels_override=solar_panels_override, m2_per_person_override=m2_override,
                 _skip_nudges=True,
             )
             return {"visitors": r.max_visitors, "renewable": r.energy.renewable_percent}
@@ -113,7 +124,7 @@ def compute_festival_plan(
             simulate_fn=simulate_fn,
             hydrogen_generators_override=hydrogen_generators_override,
             battery_units_override=battery_units_override,
-            grid_kw_override=grid_kw_override,
+            grid_kw_override=None,
             m2_per_person_override=m2_per_person_override,
         )
 
@@ -122,16 +133,20 @@ def compute_festival_plan(
     if total_daily > 0:
         grid_ren = grid_kwh * ren_share
         grid_fos = grid_kwh * (1 - ren_share)
-        for name, kwh in [("Grid (renewable)", grid_ren), ("Grid (fossil)", grid_fos), ("Hydrogen", h2_kwh), ("Battery", bat_kwh)]:
+        source_list = [("Grid (renewable)", grid_ren), ("Grid (fossil)", grid_fos), ("Hydrogen", h2_kwh)]
+        if solar_kwh > 0:
+            source_list.append(("Solar", solar_kwh))
+        source_list.append(("Battery", bat_kwh))
+        for name, kwh in source_list:
             sources.append(EnergySource(name=name, capacity_kWh=round(kwh * duration_days, 1), share_percent=round(kwh / total_daily * 100, 1)))
 
-    # --- Hourly dispatch (using NEDU profile shape for the month) ---
+    # --- Hourly dispatch ---
     load_profile = load_load_profile()
     nedu_hourly = get_nedu_hourly_profile(month, load_profile)
-    amsterdam_daily_demand = get_amsterdam_monthly_avg_demand_mwh(month, load_profile)
-
-    hourly_mix = compute_hourly_mix(total_daily, grid_kw, h2_units * HYDROGEN_GENERATOR_KW, bat_kwh, hourly_prices, ren_share,
-                                    nedu_profile=nedu_hourly)
+    hourly_mix = compute_hourly_mix(
+        total_daily, grid_kw, h2_units * HYDROGEN_GENERATOR_KW, bat_kwh,
+        hourly_prices, ren_share, nedu_profile=nedu_hourly, solar_hourly=solar_hourly if solar_kwh > 0 else None,
+    )
 
     # --- Resources ---
     water_pp = consumption.get("water_per_person_per_day_liters", {}).get("total_incl_sanitation_mid", 13)
@@ -145,6 +160,8 @@ def compute_festival_plan(
     is_ndsm = (52.3 < lat < 52.5) and (4.8 < lng < 5.0)
     location_name = "NDSM Wharf, Amsterdam-Noord" if is_ndsm else f"{lat:.4f}, {lng:.4f}"
 
+    solar_cost = panel_count * SOLAR_PANEL_COST_EUR
+
     return FestivalPlan(
         max_visitors=max_vis,
         location_name=location_name,
@@ -157,6 +174,8 @@ def compute_festival_plan(
             sources=sources,
             hydrogen_generators=h2_units,
             hydrogen_capacity_kWh=round(h2_kwh * duration_days, 1),
+            solar_panels=panel_count,
+            solar_daily_kWh=round(solar_kwh, 1),
             battery_units=bat_count,
             battery_capacity_kWh=round(bat_kwh, 1),
             grid_kw=grid_kw,
@@ -177,9 +196,10 @@ def compute_festival_plan(
         ),
         cost=CostEstimate(
             hydrogen_generators_eur=h2_units * HYDROGEN_GENERATOR_COST_EUR,
+            solar_panels_eur=solar_cost,
             batteries_eur=bat_count * 11000,
             grid_connection_eur=grid_kw * 50 * duration_days,
-            total_eur=h2_units * HYDROGEN_GENERATOR_COST_EUR + bat_count * 11000 + grid_kw * 50 * duration_days,
+            total_eur=h2_units * HYDROGEN_GENERATOR_COST_EUR + solar_cost + bat_count * 11000 + grid_kw * 50 * duration_days,
         ),
         grid_congested=grid["congested"],
         nudges=nudges,

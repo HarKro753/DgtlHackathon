@@ -17,7 +17,7 @@ export function useFestivalPlanner() {
   const overridesRef = useRef<Overrides>({
     hydrogen_generators: null,
     battery_units: null,
-    grid_kw: null,
+    solar_panels: null,
     m2_per_person: null,
   });
 
