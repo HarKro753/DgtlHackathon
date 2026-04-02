@@ -7,16 +7,24 @@ class EnergySource(BaseModel):
     share_percent: float
 
 
+class Nudge(BaseModel):
+    message: str
+    action: str  # e.g. "hydrogen_generators" — which parameter to change
+    value: int | float  # suggested new value
+    impact: str  # e.g. "renewable: 50% → 75%"
+
+
 class EnergyBreakdown(BaseModel):
     total_supply_kWh: float
     total_demand_kWh: float
     sources: list[EnergySource]
-    solar_panels_count: int
-    solar_area_m2: float
+    hydrogen_generators: int
+    hydrogen_capacity_kWh: float
     battery_units: int
     battery_capacity_kWh: float
-    hourly_solar_kWh: dict[str, float] = Field(default_factory=dict, description="Hour → kWh solar output")
-    hourly_prices_eur_mwh: dict[str, float] = Field(default_factory=dict, description="Hour → EUR/MWh spot price")
+    grid_kw: int
+    renewable_percent: float
+    hourly_mix: list[dict] = Field(default_factory=list, description="Per-hour breakdown: [{hour, grid_renewable, grid_fossil, hydrogen, battery, demand, price}]")
 
 
 class ResourceBreakdown(BaseModel):
@@ -33,8 +41,9 @@ class ResourceBreakdown(BaseModel):
 
 
 class CostEstimate(BaseModel):
-    solar_panels_eur: float
+    hydrogen_generators_eur: float
     batteries_eur: float
+    grid_connection_eur: float
     total_eur: float
 
 
@@ -47,5 +56,5 @@ class FestivalPlan(BaseModel):
     energy: EnergyBreakdown
     resources: ResourceBreakdown
     cost: CostEstimate
-    grid_congested: bool = Field(description="Whether the local grid is at capacity")
-    renewable_percent: float = Field(description="Percentage of energy from renewables")
+    grid_congested: bool
+    nudges: list[Nudge] = Field(default_factory=list)

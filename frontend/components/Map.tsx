@@ -4,23 +4,26 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+export interface PolygonPoint {
+  lat: number;
+  lng: number;
+}
+
 interface MapProps {
-  onAreaSelected: (lat: number, lng: number, area_m2: number) => void;
+  onAreaSelected: (lat: number, lng: number, area_m2: number, polygon: PolygonPoint[]) => void;
 }
 
 const NDSM_CENTER: [number, number] = [52.3984, 4.8932];
 const DEFAULT_ZOOM = 16;
 
-// DGTL festival area polygon (approximate from the 2024 map)
+// DGTL festival area polygon (actual area from user-drawn polygon)
 const DGTL_POLYGON: [number, number][] = [
-  [52.4012, 4.8893],
-  [52.4008, 4.8942],
-  [52.4003, 4.897],
-  [52.3988, 4.8975],
-  [52.397, 4.896],
-  [52.3965, 4.8935],
-  [52.3968, 4.8905],
-  [52.398, 4.8888],
+  [52.402956, 4.894506],
+  [52.401024, 4.892017],
+  [52.398566, 4.891191],
+  [52.398749, 4.895289],
+  [52.399837, 4.897585],
+  [52.400859, 4.899001],
 ];
 
 const START_MARKER_ICON = L.divIcon({
@@ -94,7 +97,8 @@ export function Map({ onAreaSelected }: MapProps) {
 
       const center = getPolygonCenter(latlngs);
       const area = calculatePolygonArea(latlngs);
-      onAreaSelectedRef.current(center.lat, center.lng, area);
+      const points = latlngs.map((ll) => ({ lat: ll.lat, lng: ll.lng }));
+      onAreaSelectedRef.current(center.lat, center.lng, area, points);
     },
     [clearDrawingLayers],
   );

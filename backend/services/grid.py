@@ -16,8 +16,12 @@ def check_grid_capacity(lat: float, lng: float, dataset: dict) -> dict:
             "status": grid_data.get("congestion_status", "MAXIMUM CAPACITY"),
             "bottleneck": grid_data.get("bottleneck", "Medium voltage grid"),
             "existing_solar_kwp": grid_data.get("ndsm_energie_cooperative", {}).get("solar_capacity_kWp", 0),
-            "grid_available_kw": 50,  # limited due to congestion
-            "notes": grid_data.get("implication_for_festivals", "Grid congested — on-site renewables essential"),
+            # NDSM has an existing green grid connection. Grid provides ~80% of DGTL's power.
+            # Congestion means NO NEW large connections, but existing ones work.
+            # Back-calculated from DGTL: 40k visitors needs ~12,000 kWh/day, 80% from grid
+            # = ~9,600 kWh/day ÷ 14h = ~700kW
+            "grid_available_kw": 700,
+            "notes": grid_data.get("implication_for_festivals", "Grid congested — no new connections, existing grid + on-site generators required"),
         }
 
     return {
@@ -25,6 +29,6 @@ def check_grid_capacity(lat: float, lng: float, dataset: dict) -> dict:
         "status": "AVAILABLE",
         "bottleneck": None,
         "existing_solar_kwp": 0,
-        "grid_available_kw": 500,  # default assumption for uncongested areas
+        "grid_available_kw": 500,  # default for uncongested areas
         "notes": "Grid capacity available for temporary event connections",
     }

@@ -4,16 +4,34 @@ export interface EnergySource {
   share_percent: number;
 }
 
+export interface HourlyMix {
+  hour: string;
+  demand: number;
+  grid_renewable: number;
+  grid_fossil: number;
+  hydrogen: number;
+  battery: number;
+  price: number;
+}
+
+export interface Nudge {
+  message: string;
+  action: string;
+  value: number;
+  impact: string;
+}
+
 export interface EnergyBreakdown {
   total_supply_kWh: number;
   total_demand_kWh: number;
   sources: EnergySource[];
-  solar_panels_count: number;
-  solar_area_m2: number;
+  hydrogen_generators: number;
+  hydrogen_capacity_kWh: number;
   battery_units: number;
   battery_capacity_kWh: number;
-  hourly_solar_kWh: Record<string, number>;
-  hourly_prices_eur_mwh: Record<string, number>;
+  grid_kw: number;
+  renewable_percent: number;
+  hourly_mix: HourlyMix[];
 }
 
 export interface ResourceBreakdown {
@@ -30,8 +48,9 @@ export interface ResourceBreakdown {
 }
 
 export interface CostEstimate {
-  solar_panels_eur: number;
+  hydrogen_generators_eur: number;
   batteries_eur: number;
+  grid_connection_eur: number;
   total_eur: number;
 }
 
@@ -45,7 +64,7 @@ export interface FestivalPlan {
   resources: ResourceBreakdown;
   cost: CostEstimate;
   grid_congested: boolean;
-  renewable_percent: number;
+  nudges: Nudge[];
 }
 
 export interface PlanRequest {
@@ -54,4 +73,18 @@ export interface PlanRequest {
   area_m2: number;
   duration_days: number;
   month: number;
+  mode: "visitors" | "renewable";
+  target_visitors?: number | null;
+  target_renewable_percent?: number | null;
+  hydrogen_generators?: number | null;
+  battery_units?: number | null;
+  grid_kw?: number | null;
+  m2_per_person?: number | null;
+}
+
+export interface Overrides {
+  hydrogen_generators: number | null;
+  battery_units: number | null;
+  grid_kw: number | null;
+  m2_per_person: number | null;
 }

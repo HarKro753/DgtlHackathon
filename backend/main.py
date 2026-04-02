@@ -33,6 +33,13 @@ async def plan(request: PlanRequest) -> PlanResponse:
         duration_days=request.duration_days,
         month=request.month,
         dataset=dataset,
+        mode=request.mode,
+        target_visitors=request.target_visitors,
+        target_renewable_percent=request.target_renewable_percent,
+        hydrogen_generators_override=request.hydrogen_generators,
+        battery_units_override=request.battery_units,
+        grid_kw_override=request.grid_kw,
+        m2_per_person_override=request.m2_per_person,
     )
     return PlanResponse(plan=result)
 

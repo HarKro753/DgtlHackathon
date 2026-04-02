@@ -1,61 +1,79 @@
-"""Pure conversion functions for energy calculations. No I/O, no state."""
+"""Pure energy conversion functions. No I/O, no state, no dataset access."""
+
+import math
 
 
-def area_to_panel_count(area_m2: float, panel_area_m2: float = 1.95) -> int:
-    """How many solar panels fit in a given area. Assumes 70% usable space (spacing, access)."""
-    usable = area_m2 * 0.70
-    return int(usable / panel_area_m2)
+HYDROGEN_GENERATOR_KW = 100
+ENERGY_PER_VISITOR_PER_DAY_KWH = 0.5
+STAGE_KW_PER_1000_M2 = 7
+GRID_RENEWABLE_SHARE = 0.40
+OCCUPANCY_FACTOR = 0.6
+HOURS_PER_DAY = 14  # festival operating hours
+
+DEMAND_WEIGHTS = {
+    "10:00": 0.02, "11:00": 0.03, "12:00": 0.04, "13:00": 0.05,
+    "14:00": 0.06, "15:00": 0.07, "16:00": 0.08, "17:00": 0.10,
+    "18:00": 0.12, "19:00": 0.13, "20:00": 0.12, "21:00": 0.10,
+    "22:00": 0.05, "23:00": 0.03,
+}
+DEMAND_TOTAL_WEIGHT = sum(DEMAND_WEIGHTS.values())
 
 
-def panels_to_kwh_per_day(
-    panel_count: int,
-    panel_watt: int = 400,
-    kwh_per_kwp_per_day: float = 3.55,
-) -> float:
-    """Daily kWh output from N panels. Default: April Amsterdam (3.55 kWh/kWp/day)."""
-    kwp = (panel_count * panel_watt) / 1000
-    return kwp * kwh_per_kwp_per_day
+def battery_units_needed(kwh_needed: float, unit_capacity_kwh: float = 13.5) -> int:
+    if kwh_needed <= 0:
+        return 0
+    return math.ceil(kwh_needed / unit_capacity_kwh)
 
 
-def wind_kwh_per_day(avg_wind_m_s: float, rotor_diameter_m: float = 5.0) -> float:
-    """Rough daily wind energy estimate using simplified power curve.
-    P = 0.5 * rho * A * v^3 * Cp * eta
-    rho=1.225, Cp=0.35, eta=0.9
+def calc_renewable_percent(grid_kwh: float, hydrogen_kwh: float, battery_kwh: float) -> float:
+    total = grid_kwh + hydrogen_kwh + battery_kwh
+    if total == 0:
+        return 0
+    non_battery = grid_kwh + hydrogen_kwh
+    if non_battery > 0:
+        bat_ren = battery_kwh * (hydrogen_kwh + grid_kwh * GRID_RENEWABLE_SHARE) / non_battery
+    else:
+        bat_ren = 0
+    renewable = hydrogen_kwh + grid_kwh * GRID_RENEWABLE_SHARE + bat_ren
+    return round(renewable / total * 100, 1)
+
+
+def stage_energy(area_m2: float) -> float:
+    """Daily stage energy in kWh. Caps stage area at 30% of total."""
+    stage_area = area_m2 * 0.30
+    return (stage_area / 1000) * STAGE_KW_PER_1000_M2 * 10
+
+
+def daily_supply(grid_kw: int, h2_units: int, battery_count: int) -> tuple[float, float, float]:
+    """Returns (grid_kwh, h2_kwh, battery_kwh) per day."""
+    return (
+        grid_kw * HOURS_PER_DAY,
+        h2_units * HYDROGEN_GENERATOR_KW * HOURS_PER_DAY,
+        battery_count * 13.5,
+    )
+
+
+def max_visitors_from_energy(available_kwh: float) -> int:
+    if available_kwh <= 0:
+        return 0
+    return int(available_kwh / (ENERGY_PER_VISITOR_PER_DAY_KWH * OCCUPANCY_FACTOR))
+
+
+def max_visitors_from_space(area_m2: float, m2_per_person: float) -> int:
+    return int(area_m2 * 0.70 / m2_per_person)
+
+
+def find_max_grid_for_renewable_target(
+    grid_kw: int, h2_daily_kwh: float, bat_kwh: float, target_pct: float,
+) -> int:
+    """Find the maximum grid kW that keeps renewable % >= target.
+    Returns the usable grid kW (may be less than available).
     """
-    import math
-
-    rho = 1.225
-    area = math.pi * (rotor_diameter_m / 2) ** 2
-    cp = 0.35
-    eta = 0.9
-    power_w = 0.5 * rho * area * (avg_wind_m_s ** 3) * cp * eta
-    return (power_w / 1000) * 24  # kWh per day
-
-
-def battery_units_needed(evening_demand_kwh: float, unit_capacity_kwh: float = 13.5) -> int:
-    """Number of battery units to cover evening/night demand."""
-    import math
-
-    return math.ceil(evening_demand_kwh / unit_capacity_kwh)
-
-
-def visitors_per_kwh(energy_kwh_per_visitor_per_day: float = 2.3) -> float:
-    """How many visitors one kWh can support per day."""
-    return 1.0 / energy_kwh_per_visitor_per_day
-
-
-def solar_hourly_profile(daily_total_kwh: float) -> dict[str, float]:
-    """Distribute daily solar output across hours using a bell curve peaking at 13:00.
-    Returns hour string → kWh.
-    """
-    weights = {
-        "06:00": 0.02, "07:00": 0.04, "08:00": 0.07, "09:00": 0.10,
-        "10:00": 0.12, "11:00": 0.14, "12:00": 0.15, "13:00": 0.14,
-        "14:00": 0.12, "15:00": 0.10, "16:00": 0.07, "17:00": 0.04,
-        "18:00": 0.02,
-    }
-    total_weight = sum(weights.values())
-    return {
-        hour: round((w / total_weight) * daily_total_kwh, 1)
-        for hour, w in weights.items()
-    }
+    for candidate_kw in range(grid_kw, -1, -10):
+        candidate_kwh = candidate_kw * HOURS_PER_DAY
+        if candidate_kwh + h2_daily_kwh + bat_kwh == 0:
+            continue
+        pct = calc_renewable_percent(candidate_kwh, h2_daily_kwh, bat_kwh)
+        if pct >= target_pct:
+            return candidate_kw
+    return 0

@@ -1,6 +1,6 @@
-"""Core optimizer: given supply constraints, calculate maximum sustainable festival."""
+"""Orchestrator — wires infrastructure, energy, dispatch, and nudges together."""
 
-import math
+from functools import partial
 
 from models.festival import (
     CostEstimate,
@@ -9,138 +9,168 @@ from models.festival import (
     FestivalPlan,
     ResourceBreakdown,
 )
-from services.solar import calculate_solar_potential
-from services.wind import calculate_wind_potential
 from services.grid import check_grid_capacity
-from utils.energy import battery_units_needed
+from services.dispatch import compute_hourly_mix
+from services.infrastructure import auto_h2_generators, auto_battery_count, h2_for_visitor_target
+from services.nudges import generate_nudges
+from utils.energy import (
+    HYDROGEN_GENERATOR_KW,
+    HOURS_PER_DAY,
+    GRID_RENEWABLE_SHARE,
+    ENERGY_PER_VISITOR_PER_DAY_KWH,
+    calc_renewable_percent,
+    daily_supply,
+    stage_energy,
+    max_visitors_from_energy,
+    max_visitors_from_space,
+    find_max_grid_for_renewable_target,
+)
+
+HYDROGEN_GENERATOR_COST_EUR = 50000
 
 
 def compute_festival_plan(
-    lat: float,
-    lng: float,
-    area_m2: float,
-    duration_days: int,
-    month: int,
+    lat: float, lng: float, area_m2: float, duration_days: int, month: int,
     dataset: dict,
+    mode: str = "visitors",
+    target_visitors: int | None = None,
+    target_renewable_percent: float | None = None,
+    hydrogen_generators_override: int | None = None,
+    battery_units_override: int | None = None,
+    grid_kw_override: int | None = None,
+    m2_per_person_override: float | None = None,
+    _skip_nudges: bool = False,
 ) -> FestivalPlan:
-    """Compute the maximum sustainable festival for a given location and area.
-
-    The hard constraint is 100% renewable energy. Everything else is derived.
-    """
-    # --- Supply side ---
-    solar = calculate_solar_potential(area_m2, month, dataset)
-    wind = calculate_wind_potential(month, dataset)
     grid = check_grid_capacity(lat, lng, dataset)
-
-    # Grid contribution (renewable portion from grid, limited by congestion)
-    grid_daily_kwh = grid["grid_available_kw"] * 12  # assume 12 useful hours/day
-
-    total_daily_supply_kwh = solar["daily_kwh"] + wind["daily_kwh"] + grid_daily_kwh
-
-    # --- Demand side (from DGTL measured data) ---
     consumption = dataset.get("festival_resource_consumption", {})
-    energy_data = dataset.get("festival_energy_consumption", {})
+    prices_data = dataset.get("electricity_prices_netherlands", {})
+    hourly_prices = prices_data.get("typical_summer_day_hourly_EUR_MWh", {}).get("hours", {})
 
-    # Energy per visitor per day — all-inclusive (their share of stages, vendors, infrastructure)
-    # Derived from DGTL: total energy / visitors. Using diesel-era baseline as upper bound.
-    # 0.7L diesel/person/day = ~2.3 kWh (Powerful Thinking benchmark for large festivals)
-    # DGTL optimized runs much lower. We use 0.5 kWh as a realistic optimized-but-not-extreme value.
-    energy_per_visitor_day = 0.5
+    grid_kw = grid_kw_override if grid_kw_override is not None else grid["grid_available_kw"]
+    m2_pp = m2_per_person_override if m2_per_person_override is not None else 1.0
+    stage_kwh = stage_energy(area_m2)
 
-    # Max visitors from energy = total supply / per-visitor demand
-    max_visitors = int(total_daily_supply_kwh / energy_per_visitor_day)
+    # --- Infrastructure (fixed, area-based) ---
+    h2_units = hydrogen_generators_override if hydrogen_generators_override is not None else auto_h2_generators(area_m2)
+    bat_count = battery_units_override if battery_units_override is not None else auto_battery_count(grid_kw, h2_units)
 
-    # Also constrain by physical space: ~2 m2 per person for crowd comfort
-    space_for_crowd = area_m2 * 0.60  # 60% of area for crowd (rest is infrastructure)
-    max_by_space = int(space_for_crowd / 2.0)
-    max_visitors = min(max_visitors, max_by_space)
+    grid_kwh, h2_kwh, bat_kwh = daily_supply(grid_kw, h2_units, bat_count)
+    total_daily = grid_kwh + h2_kwh + bat_kwh
+    space_limit = max_visitors_from_space(area_m2, m2_pp)
 
-    # --- Resource calculations ---
-    water_per_person = consumption.get("water_per_person_per_day_liters", {}).get(
-        "total_incl_sanitation_mid", 13
-    )
-    food_per_person = consumption.get("food_per_person_per_day", {}).get("mid_kg", 1.5)
-    drinks_per_person = consumption.get("drinks_per_person_per_day", {}).get(
-        "dgtl_drinks_per_visitor_kg", 2.25
-    )
-    waste_per_person = consumption.get("waste_per_person_per_day_kg", {}).get(
-        "dgtl_visitor_waste_per_person_kg", 0.08
-    )
-    toilets_per_100 = consumption.get("sanitation", {}).get(
-        "toilets_per_100_people_festival", 3
-    )
+    if mode == "visitors":
+        ren_target = target_renewable_percent if target_renewable_percent is not None else 50.0
+        current_pct = calc_renewable_percent(grid_kwh, h2_kwh, bat_kwh)
 
-    total_demand_kwh = (max_visitors * energy_per_visitor_day) * duration_days
+        if current_pct >= ren_target:
+            usable_daily = total_daily
+        else:
+            usable_grid_kw = find_max_grid_for_renewable_target(grid_kw, h2_kwh, bat_kwh, ren_target)
+            grid_kwh = usable_grid_kw * HOURS_PER_DAY
+            usable_daily = grid_kwh + h2_kwh + bat_kwh
 
-    # --- Batteries for evening/night ---
-    # Assume 40% of daily energy is needed after sunset (no solar)
-    evening_demand = total_daily_supply_kwh * 0.40
-    battery_count = battery_units_needed(evening_demand, 13.5)
-    battery_capacity = battery_count * 13.5
-    battery_cost = battery_count * 11000  # avg EUR per Powerwall
+        renewable_pct = calc_renewable_percent(grid_kwh, h2_kwh, bat_kwh)
+        available = max(0, usable_daily - stage_kwh)
+        max_vis = min(max_visitors_from_energy(available), space_limit)
 
-    # --- Energy sources breakdown ---
-    total_supply_kwh = total_daily_supply_kwh * duration_days
-    sources = [
-        EnergySource(
-            name="Solar",
-            capacity_kWh=round(solar["daily_kwh"] * duration_days, 1),
-            share_percent=round(solar["daily_kwh"] / total_daily_supply_kwh * 100, 1),
-        ),
-        EnergySource(
-            name="Wind",
-            capacity_kWh=round(wind["daily_kwh"] * duration_days, 1),
-            share_percent=round(wind["daily_kwh"] / total_daily_supply_kwh * 100, 1),
-        ),
-        EnergySource(
-            name="Grid (renewable)",
-            capacity_kWh=round(grid_daily_kwh * duration_days, 1),
-            share_percent=round(grid_daily_kwh / total_daily_supply_kwh * 100, 1),
-        ),
-    ]
+    else:  # mode == "renewable"
+        vis_target = target_visitors if target_visitors is not None else 20000
 
-    # --- Hourly pricing ---
-    prices = dataset.get("electricity_prices_netherlands", {})
-    summer_prices = prices.get("typical_summer_day_hourly_EUR_MWh", {}).get("hours", {})
+        if hydrogen_generators_override is None:
+            h2_units = h2_for_visitor_target(vis_target, stage_kwh, grid_kwh, bat_kwh)
+            grid_kwh, h2_kwh, bat_kwh = daily_supply(grid_kw, h2_units, bat_count)
+            total_daily = grid_kwh + h2_kwh + bat_kwh
 
-    # --- Location name ---
+        renewable_pct = calc_renewable_percent(grid_kwh, h2_kwh, bat_kwh)
+        available = max(0, total_daily - stage_kwh)
+        max_vis = min(max_visitors_from_energy(available), space_limit, vis_target)
+
+    total_daily = grid_kwh + h2_kwh + bat_kwh
+
+    # --- Nudges ---
+    if _skip_nudges:
+        nudges = []
+    else:
+        def simulate_fn(ren_target, vis_target, h2_override, bat_override, grid_override, m2_override):
+            r = compute_festival_plan(
+                lat, lng, area_m2, duration_days, month, dataset,
+                mode=mode, target_renewable_percent=ren_target, target_visitors=vis_target,
+                hydrogen_generators_override=h2_override, battery_units_override=bat_override,
+                grid_kw_override=grid_override, m2_per_person_override=m2_override,
+                _skip_nudges=True,
+            )
+            return {"visitors": r.max_visitors, "renewable": r.energy.renewable_percent}
+
+        nudges = generate_nudges(
+            mode=mode, max_vis=max_vis, renewable_pct=renewable_pct, h2_units=h2_units,
+            target_renewable_percent=target_renewable_percent, target_visitors=target_visitors,
+            simulate_fn=simulate_fn,
+            hydrogen_generators_override=hydrogen_generators_override,
+            battery_units_override=battery_units_override,
+            grid_kw_override=grid_kw_override,
+            m2_per_person_override=m2_per_person_override,
+        )
+
+    # --- Sources ---
+    sources = []
+    if total_daily > 0:
+        grid_ren = grid_kwh * GRID_RENEWABLE_SHARE
+        grid_fos = grid_kwh * (1 - GRID_RENEWABLE_SHARE)
+        for name, kwh in [("Grid (renewable)", grid_ren), ("Grid (fossil)", grid_fos), ("Hydrogen", h2_kwh), ("Battery", bat_kwh)]:
+            sources.append(EnergySource(name=name, capacity_kWh=round(kwh * duration_days, 1), share_percent=round(kwh / total_daily * 100, 1)))
+
+    # --- Hourly dispatch ---
+    hourly_mix = compute_hourly_mix(total_daily, grid_kw, h2_units * HYDROGEN_GENERATOR_KW, bat_kwh, hourly_prices)
+
+    # --- Resources ---
+    water_pp = consumption.get("water_per_person_per_day_liters", {}).get("total_incl_sanitation_mid", 13)
+    food_pp = consumption.get("food_per_person_per_day", {}).get("mid_kg", 1.5)
+    drinks_pp = consumption.get("drinks_per_person_per_day", {}).get("dgtl_drinks_per_visitor_kg", 2.25)
+    waste_pp = consumption.get("waste_per_person_per_day_kg", {}).get("dgtl_visitor_waste_per_person_kg", 0.08)
+    toilets_per_100 = consumption.get("sanitation", {}).get("toilets_per_100_people_festival", 3)
+
+    import math
+    total_demand = (max_vis * ENERGY_PER_VISITOR_PER_DAY_KWH + stage_kwh) * duration_days
+
     is_ndsm = (52.3 < lat < 52.5) and (4.8 < lng < 5.0)
     location_name = "NDSM Wharf, Amsterdam-Noord" if is_ndsm else f"{lat:.4f}, {lng:.4f}"
 
     return FestivalPlan(
-        max_visitors=max_visitors,
+        max_visitors=max_vis,
         location_name=location_name,
         area_m2=area_m2,
         duration_days=duration_days,
         month=month,
         energy=EnergyBreakdown(
-            total_supply_kWh=round(total_supply_kwh, 1),
-            total_demand_kWh=round(total_demand_kwh, 1),
+            total_supply_kWh=round(total_daily * duration_days, 1),
+            total_demand_kWh=round(total_demand, 1),
             sources=sources,
-            solar_panels_count=solar["panel_count"],
-            solar_area_m2=solar["solar_area_m2"],
-            battery_units=battery_count,
-            battery_capacity_kWh=round(battery_capacity, 1),
-            hourly_solar_kWh=solar["hourly_kwh"],
-            hourly_prices_eur_mwh=summer_prices,
+            hydrogen_generators=h2_units,
+            hydrogen_capacity_kWh=round(h2_kwh * duration_days, 1),
+            battery_units=bat_count,
+            battery_capacity_kWh=round(bat_kwh, 1),
+            grid_kw=grid_kw,
+            renewable_percent=renewable_pct,
+            hourly_mix=hourly_mix,
         ),
         resources=ResourceBreakdown(
-            water_liters_total=round(max_visitors * water_per_person * duration_days, 0),
-            water_liters_per_person=water_per_person,
-            food_kg_total=round(max_visitors * food_per_person * duration_days, 0),
-            food_kg_per_person=food_per_person,
-            drinks_kg_total=round(max_visitors * drinks_per_person * duration_days, 0),
-            drinks_kg_per_person=drinks_per_person,
-            waste_kg_total=round(max_visitors * waste_per_person * duration_days, 0),
-            waste_kg_per_person=waste_per_person,
-            toilets_required=math.ceil(max_visitors / 100 * toilets_per_100),
-            human_waste_kg=round(max_visitors * 2.835 * duration_days, 0),  # 113400kg / 40000 visitors
+            water_liters_total=round(max_vis * water_pp * duration_days, 0),
+            water_liters_per_person=water_pp,
+            food_kg_total=round(max_vis * food_pp * duration_days, 0),
+            food_kg_per_person=food_pp,
+            drinks_kg_total=round(max_vis * drinks_pp * duration_days, 0),
+            drinks_kg_per_person=drinks_pp,
+            waste_kg_total=round(max_vis * waste_pp * duration_days, 0),
+            waste_kg_per_person=waste_pp,
+            toilets_required=math.ceil(max_vis / 100 * toilets_per_100),
+            human_waste_kg=round(max_vis * 2.835 * duration_days, 0),
         ),
         cost=CostEstimate(
-            solar_panels_eur=solar["cost_eur"],
-            batteries_eur=battery_cost,
-            total_eur=solar["cost_eur"] + battery_cost,
+            hydrogen_generators_eur=h2_units * HYDROGEN_GENERATOR_COST_EUR,
+            batteries_eur=bat_count * 11000,
+            grid_connection_eur=grid_kw * 50 * duration_days,
+            total_eur=h2_units * HYDROGEN_GENERATOR_COST_EUR + bat_count * 11000 + grid_kw * 50 * duration_days,
         ),
         grid_congested=grid["congested"],
-        renewable_percent=100.0,
+        nudges=nudges,
     )
