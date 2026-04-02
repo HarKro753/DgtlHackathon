@@ -1,0 +1,484 @@
+{
+  "metadata": {
+    "project": "DGTL Festival - Sustainable Energy Planning",
+    "location": "NDSM Wharf, Amsterdam-Noord",
+    "coordinates": { "latitude": 52.38, "longitude": 4.9 },
+    "created": "2026-04-02",
+    "description": "Mock dataset compiled from real Dutch/European energy sources"
+  },
+
+  "solar_irradiance_amsterdam": {
+    "source": "PVGIS 5.2 API (EU JRC) - SARAH2 database, 2005-2020 average",
+    "source_url": "https://re.jrc.ec.europa.eu/pvg_tools/en/",
+    "location": { "latitude": 52.38, "longitude": 4.9, "elevation_m": 9 },
+    "annual_irradiation_kWh_per_m2": 1086.0,
+    "annual_pv_output_kWh_per_kWp": 859.05,
+    "monthly": [
+      { "month": 1,  "name": "Jan", "irradiation_kWh_m2_day": 0.70, "irradiation_kWh_m2_month": 21.75, "pv_output_kWh_day": 0.50,  "pv_output_kWh_month": 15.64  },
+      { "month": 2,  "name": "Feb", "irradiation_kWh_m2_day": 1.35, "irradiation_kWh_m2_month": 37.81, "pv_output_kWh_day": 1.06,  "pv_output_kWh_month": 29.68  },
+      { "month": 3,  "name": "Mar", "irradiation_kWh_m2_day": 2.62, "irradiation_kWh_m2_month": 81.29, "pv_output_kWh_day": 2.14,  "pv_output_kWh_month": 66.41  },
+      { "month": 4,  "name": "Apr", "irradiation_kWh_m2_day": 4.36, "irradiation_kWh_m2_month": 130.93,"pv_output_kWh_day": 3.55,  "pv_output_kWh_month": 106.63 },
+      { "month": 5,  "name": "May", "irradiation_kWh_m2_day": 5.12, "irradiation_kWh_m2_month": 158.86,"pv_output_kWh_day": 4.13,  "pv_output_kWh_month": 127.88 },
+      { "month": 6,  "name": "Jun", "irradiation_kWh_m2_day": 5.46, "irradiation_kWh_m2_month": 163.88,"pv_output_kWh_day": 4.33,  "pv_output_kWh_month": 129.98 },
+      { "month": 7,  "name": "Jul", "irradiation_kWh_m2_day": 5.28, "irradiation_kWh_m2_month": 163.77,"pv_output_kWh_day": 4.14,  "pv_output_kWh_month": 128.33 },
+      { "month": 8,  "name": "Aug", "irradiation_kWh_m2_day": 4.34, "irradiation_kWh_m2_month": 134.47,"pv_output_kWh_day": 3.41,  "pv_output_kWh_month": 105.71 },
+      { "month": 9,  "name": "Sep", "irradiation_kWh_m2_day": 3.16, "irradiation_kWh_m2_month": 94.76, "pv_output_kWh_day": 2.50,  "pv_output_kWh_month": 75.04  },
+      { "month": 10, "name": "Oct", "irradiation_kWh_m2_day": 1.77, "irradiation_kWh_m2_month": 55.00, "pv_output_kWh_day": 1.38,  "pv_output_kWh_month": 42.78  },
+      { "month": 11, "name": "Nov", "irradiation_kWh_m2_day": 0.88, "irradiation_kWh_m2_month": 26.52, "pv_output_kWh_day": 0.65,  "pv_output_kWh_month": 19.37  },
+      { "month": 12, "name": "Dec", "irradiation_kWh_m2_day": 0.55, "irradiation_kWh_m2_month": 16.96, "pv_output_kWh_day": 0.37,  "pv_output_kWh_month": 11.60  }
+    ],
+    "notes": "Horizontal plane (slope=0). PV output assumes 1 kWp c-Si module with 14% system loss."
+  },
+
+  "electricity_prices_netherlands": {
+    "source": "EPEX SPOT NL Day-Ahead Market via energyprices.eu, electricitymaps.com, gridio.io",
+    "source_urls": [
+      "https://www.energyprices.eu/electricity/netherlands",
+      "https://www.electricitymaps.com/grid-in-review-2025/the-netherlands",
+      "https://www.gridio.io/blog/2025-electricity-prices-5-insights-for-dutch-ev-drivers"
+    ],
+    "currency": "EUR/MWh",
+    "year": 2025,
+    "annual_average_EUR_MWh": 82,
+    "average_daily_swing_EUR_MWh": 124,
+    "max_single_day_swing_EUR_MWh": 477,
+    "negative_price_hours_share_percent": 8.5,
+    "typical_summer_day_hourly_EUR_MWh": {
+      "description": "Reconstructed typical summer weekday profile based on reported patterns: midday solar dip (negative at 12-14h), evening peak at 19h, overnight moderate",
+      "hours": {
+        "00:00": 65, "01:00": 55, "02:00": 48, "03:00": 45,
+        "04:00": 42, "05:00": 50, "06:00": 62, "07:00": 78,
+        "08:00": 85, "09:00": 72, "10:00": 45, "11:00": 18,
+        "12:00": -10, "13:00": -17, "14:00": -5, "15:00": 22,
+        "16:00": 55, "17:00": 95, "18:00": 130, "19:00": 144,
+        "20:00": 125, "21:00": 105, "22:00": 88, "23:00": 75
+      }
+    },
+    "typical_winter_day_hourly_EUR_MWh": {
+      "description": "Typical winter weekday: no solar dip, morning and evening peaks, overnight low",
+      "hours": {
+        "00:00": 70, "01:00": 60, "02:00": 55, "03:00": 52,
+        "04:00": 55, "05:00": 65, "06:00": 85, "07:00": 110,
+        "08:00": 130, "09:00": 125, "10:00": 115, "11:00": 108,
+        "12:00": 105, "13:00": 100, "14:00": 98, "15:00": 105,
+        "16:00": 120, "17:00": 140, "18:00": 145, "19:00": 135,
+        "20:00": 115, "21:00": 100, "22:00": 85, "23:00": 75
+      }
+    },
+    "peak_demand_hour": "12:00",
+    "peak_demand_GW": 18.6,
+    "min_demand_hour": "02:00",
+    "min_demand_GW": 9.8,
+    "notes": "Summer midday prices averaged -17 EUR/MWh on weekends in 2025 due to solar oversupply. Evening ramp (duck curve) is 6.0 GW in summer vs 3.8 GW in winter."
+  },
+
+  "liander_consumption_amsterdam_noord": {
+    "source": "Liander Open Data - Kleinverbruiksgegevens 2025 (ref date 2025-01-01)",
+    "source_url": "https://www.liander.nl/over-ons/open-data",
+    "dataset_file": "kleinverbruikgegevens-2025.csv",
+    "postcode_area": "1033 (Amsterdam-Noord, near NDSM Wharf)",
+    "product_type": "ELK (electricity, kleinverbruik <= 3x80A)",
+    "summary": {
+      "total_postcode_ranges": 331,
+      "total_connections": 8665,
+      "total_annual_kWh": 23245912,
+      "weighted_avg_kWh_per_connection": 2683
+    },
+    "sample_postcodes_near_ndsm": [
+      { "postcode": "1033AA-1033AB", "connections": 27, "total_kWh": 94127,  "avg_kWh": 3486 },
+      { "postcode": "1033AC-1033AD", "connections": 32, "total_kWh": 64319,  "avg_kWh": 2010 },
+      { "postcode": "1033AE",        "connections": 24, "total_kWh": 64991,  "avg_kWh": 2708 },
+      { "postcode": "1033AG",        "connections": 24, "total_kWh": 62737,  "avg_kWh": 2614 },
+      { "postcode": "1033AH",        "connections": 15, "total_kWh": 36762,  "avg_kWh": 2451 },
+      { "postcode": "1033AV",        "connections": 74, "total_kWh": 213692, "avg_kWh": 2888 }
+    ],
+    "netherlands_household_avg_kWh": 2800,
+    "notes": "SJA GEMIDDELD = standard annual consumption averaged per connection. National average ~2800 kWh (CBS/Energie Nederland 2024-2025, declining trend from 3330 in 2010)."
+  },
+
+  "ndsm_wharf": {
+    "source": "NDSM.nl, Wikipedia, Amsterdam municipality",
+    "source_urls": [
+      "https://www.ndsm.nl/werf",
+      "https://en.wikipedia.org/wiki/NDSM",
+      "https://www.amsterdam.nl/projecten/ndsm-werf/",
+      "https://allecijfers.nl/buurt/ndsm-terrein-amsterdam/"
+    ],
+    "location": "Amsterdam-Noord, IJ waterfront",
+    "postcode": "1033",
+    "areas": {
+      "ndsm_creative_hotspot_hectares": 10,
+      "ndsm_creative_hotspot_m2": 100000,
+      "ndsm_terrein_total_hectares": 79,
+      "ndsm_terrein_land_hectares": 37,
+      "ndsm_terrein_water_hectares": 42,
+      "main_shipbuilding_hall_m2": 8500,
+      "indoor_creative_space_m2": 7000,
+      "outdoor_event_area_m2": 8000,
+      "large_hangar_m2": 20000
+    },
+    "festival_usable_area_estimate_m2": 30000,
+    "notes": "NDSM creative hotspot = 10 ha. Broader NDSM terrein neighborhood = 79 ha (37 land + 42 water). For festival planning, usable outdoor + indoor space estimated at ~30,000 m2."
+  },
+
+  "solar_panel_specs": {
+    "source": "Industry standard specifications 2025",
+    "residential_panel": {
+      "name": "Standard residential panel (e.g., Longi Hi-MO 6, JA Solar DeepBlue)",
+      "peak_power_W": 400,
+      "dimensions_m": { "length": 1.722, "width": 1.134, "area_m2": 1.95 },
+      "efficiency_percent": 20.5,
+      "weight_kg": 21.5,
+      "warranty_years": 25,
+      "degradation_per_year_percent": 0.4,
+      "cost_EUR_per_panel": 150,
+      "cost_EUR_per_Wp": 0.375
+    },
+    "commercial_panel": {
+      "name": "Large-format commercial panel (e.g., Trina Vertex S+, Canadian Solar HiKu7)",
+      "peak_power_W": 580,
+      "dimensions_m": { "length": 2.278, "width": 1.134, "area_m2": 2.58 },
+      "efficiency_percent": 22.5,
+      "weight_kg": 28.5,
+      "warranty_years": 30,
+      "degradation_per_year_percent": 0.35,
+      "cost_EUR_per_panel": 200,
+      "cost_EUR_per_Wp": 0.345
+    },
+    "amsterdam_annual_yield": {
+      "kWh_per_kWp_per_year": 859,
+      "kWh_per_400W_panel_per_year": 344,
+      "kWh_per_m2_panel_per_year": 176
+    }
+  },
+
+  "battery_specs": {
+    "source": "Tesla Energy Library, SolarReviews, industry data 2025-2026",
+    "source_urls": [
+      "https://energylibrary.tesla.com/docs/Public/EnergyStorage/Powerwall/3/Datasheet/en-us/Powerwall-3-Datasheet.pdf",
+      "https://www.solarreviews.com/blog/is-the-tesla-powerwall-the-best-solar-battery-available"
+    ],
+    "tesla_powerwall_3": {
+      "usable_capacity_kWh": 13.5,
+      "continuous_power_kW": 11.5,
+      "peak_power_A_at_240V": 185,
+      "round_trip_efficiency_percent": 90,
+      "chemistry": "LFP (Lithium Iron Phosphate)",
+      "dimensions_mm": { "height": 1098, "width": 609, "depth": 193 },
+      "weight_kg": 130,
+      "operating_temp_C": { "min": -20, "max": 50 },
+      "warranty_years": 10,
+      "cost_USD_installed": { "min": 9200, "max": 14500 },
+      "cost_EUR_installed_estimate": { "min": 8500, "max": 13500 },
+      "cost_EUR_per_kWh": { "min": 630, "max": 1000 },
+      "max_units_stackable": 4
+    },
+    "commercial_alternative": {
+      "name": "BYD Battery-Box Premium HVS/HVM",
+      "usable_capacity_kWh_range": { "min": 5.1, "max": 22.1 },
+      "module_size_kWh": 2.76,
+      "chemistry": "LFP",
+      "cost_EUR_per_kWh_estimate": 500,
+      "notes": "Modular system, stackable, widely available in EU"
+    },
+    "utility_scale_reference": {
+      "name": "Tesla Megapack 2XL",
+      "capacity_MWh": 4.0,
+      "power_MW": 2.0,
+      "cost_EUR_per_kWh_estimate": 300,
+      "notes": "For large-scale festival/grid deployment"
+    }
+  },
+
+  "water_supply": {
+    "source": "Waternet",
+    "source_url": "https://www.waternet.nl/en/service-and-contact/tap-water/where-does-our-tap-water-come-from/",
+    "operator": "Waternet (public utility)",
+    "sources": {
+      "lekkanaal": {
+        "share_percent": 67,
+        "origin": "Lek Canal near Nieuwegein (river water)",
+        "treatment": "Pumped to Amsterdamse Waterleidingduinen for 90 days natural sand filtration",
+        "plant": "Leiduin (Heemstede)",
+        "capacity_million_m3_year": 70
+      },
+      "bethunepolder": {
+        "share_percent": 33,
+        "origin": "Groundwater near Maarssen",
+        "treatment": "3 months natural filtration at Waterleidingplas Loenderveen",
+        "plant": "Weesperkarspel (Amsterdam-Zuidoost)",
+        "capacity_million_m3_year": 31
+      }
+    },
+    "total_capacity_m3_per_day": 250000,
+    "ndsm_served_by": "Leiduin (west of Amstel rule)",
+    "storage_buffer_liters": 13000000,
+    "network_loss_percent": 6,
+    "notes": "NDSM is in Amsterdam-Noord west of the Amstel, served primarily by Leiduin. Both plants interconnected. Weesperkarspel expanding capacity for new housing."
+  },
+
+  "food_supply_chain": {
+    "source": "Food Center Amsterdam, Port of Amsterdam, FoodCLIC",
+    "primary_wholesale": {
+      "name": "Food Center Amsterdam (FCA)",
+      "address": "Jan van Galenstraat 4, 1051 KM Amsterdam-West",
+      "size_hectares": 40,
+      "tenants": 90,
+      "employees": 1500,
+      "products": ["potatoes", "vegetables", "fruit", "meat", "game", "poultry", "fish", "general foodstuffs"],
+      "serves": ["horeca", "retailers", "supermarkets", "care institutions"],
+      "hours": "Mon-Fri 06:00-18:00, Sat 06:00-16:30",
+      "distance_from_ndsm_km": 11,
+      "drive_time_min": 20,
+      "operating_since": 1934
+    },
+    "other_wholesalers": [
+      { "name": "Makro Amsterdam", "address": "De Flinesstraat 9, Duivendrecht", "distance_km": 15, "type": "horeca/retail wholesale" },
+      { "name": "Sligro Amsterdam", "address": "Van der Madeweg 39, Duivendrecht", "distance_km": 15, "type": "horeca wholesale" },
+      { "name": "Food Coop Noord", "location": "Amsterdam-Noord", "distance_km": 3, "type": "organic/local cooperative" }
+    ],
+    "port_of_amsterdam": {
+      "distance_from_ndsm_km": 4,
+      "products": ["soybeans", "grains", "oilseeds", "cocoa", "coffee"],
+      "notes": "Agricultural bulk terminals with rail and inland shipping. Very close to NDSM along IJ waterfront."
+    },
+    "local_food_share_percent": 5,
+    "local_food_target_2030_percent": 25,
+    "notes": "95% of food consumed in Amsterdam is imported despite being in a productive agricultural region. North Holland produces dairy, meat, vegetables, potatoes, onions, flower bulbs."
+  },
+
+  "electricity_grid_ndsm": {
+    "source": "Liander, TenneT, NL Times, AMS Institute",
+    "grid_operator": "Liander (distribution), TenneT (transmission)",
+    "congestion_status": "MAXIMUM CAPACITY",
+    "congestion_zone": "Buiksloterham-Zuid / Overhoeks (includes NDSM)",
+    "bottleneck": "Medium voltage (MV) grid, Noord-Papaverweg substation",
+    "impact": "New large commercial/industrial connections cannot be guaranteed",
+    "expansion_plans": {
+      "north_holland_by_2033": "42 large + 40 smaller new substations, 6000 km cable replacement",
+      "amsterdam_by_2050": "3-4x current consumption expected, up to 2600 new substations"
+    },
+    "ndsm_energie_cooperative": {
+      "founded": 2013,
+      "members": 50,
+      "goal": "NDSM energy-neutral by 2030",
+      "solar_panels_ndsm_loods": 1400,
+      "solar_capacity_kWp": 402.6,
+      "planned": "wind park at Noorder IJ-plas + more rooftop solar"
+    },
+    "implication_for_festivals": "Grid congestion means large events at NDSM need temporary generators or batteries beyond local grid capacity. This is the key constraint making on-site renewables essential.",
+    "source_urls": [
+      "https://nltimes.nl/2021/06/24/amsterdam-power-grid-maximum-capacity-two-areas",
+      "https://amsterdamsmartcity.com/organisations/ndsm-energie"
+    ]
+  },
+
+  "waste_processing": {
+    "source": "AEB Amsterdam",
+    "source_url": "https://www.aebamsterdam.com/waste-to-energy/",
+    "facility": "AEB Amsterdam (Afval Energie Bedrijf)",
+    "address": "Australiehavenweg 21, 1045 BA Amsterdam (Westpoort)",
+    "distance_from_ndsm_km": 9,
+    "total_capacity_tonnes_year": 1400000,
+    "lines": {
+      "AEC_built_1993": { "capacity_tonnes_year": 850000, "lines": 4 },
+      "HRC_high_efficiency": { "capacity_tonnes_year": 550000, "lines": 2 }
+    },
+    "energy_output_per_tonne": {
+      "electricity_kWh": 628,
+      "heat_kWh": 208
+    },
+    "district_heating_to_noord": true,
+    "houses_heated": 30000,
+    "trucks_per_day": 600,
+    "post_separation_streams": 7,
+    "notes": "AEB supplies district heating to ~30,000 houses in North Amsterdam including the NDSM area. So NDSM buildings may already use waste-derived heat."
+  },
+
+  "wind_data_amsterdam": {
+    "source": "Weather Spark, KNMI",
+    "source_url": "https://weatherspark.com/y/51381/Average-Weather-in-Amsterdam-Netherlands-Year-Round",
+    "annual_average_m_per_s": 5.5,
+    "monthly_avg_m_per_s": {
+      "Jan": 6.8, "Feb": 6.3, "Mar": 5.9, "Apr": 5.2,
+      "May": 5.0, "Jun": 4.8, "Jul": 4.8, "Aug": 4.8,
+      "Sep": 5.3, "Oct": 5.9, "Nov": 6.2, "Dec": 6.5
+    },
+    "small_turbine_yield_at_5_5_m_per_s": {
+      "micro_1m_rotor_kWh_year": 300,
+      "mini_2m_rotor_kWh_year": 1500,
+      "household_5m_rotor_kWh_year": 10000
+    },
+    "netherlands_installed_wind_capacity_GW": 11.7
+  },
+
+  "festival_energy_consumption": {
+    "source": "Powerful Thinking, Julie's Bicycle, Metabolic, Arizona State University",
+    "per_visitor_per_day": {
+      "diesel_based_festival_kWh": 2.3,
+      "diesel_based_festival_liters": 0.7,
+      "optimized_festival_kWh": 0.15,
+      "highly_optimized_kWh": 0.08,
+      "notes": "0.7L diesel/person/day = ~2.3 kWh. Mysteryland achieved 0.15 kWh (2014) and 0.08 kWh (2015) after optimization."
+    },
+    "energy_split_percent": {
+      "stages_sound_lighting_video": 33,
+      "traders_vendors_refrigeration": 33,
+      "site_infrastructure": 33,
+      "source": "Arizona State University research"
+    },
+    "stage_energy_split_percent": {
+      "lighting": 54,
+      "video": 27,
+      "audio": 19
+    },
+    "stage_power_draw_kW": {
+      "small_acoustic": 30,
+      "small_festival_5000_audience": 200,
+      "main_stage_large_festival": 300,
+      "arena_touring": 400
+    },
+    "lighting_power_kW": {
+      "LED_moving_head_per_unit": 0.2,
+      "small_venue_total": 10,
+      "large_festival_total": 300
+    },
+    "refrigeration_per_unit_kW": {
+      "commercial_fridge": 0.18,
+      "large_commercial_fridge": 0.7,
+      "commercial_freezer": 1.5,
+      "ten_unit_bar_zone_kW": 4.5
+    },
+    "dgtl_specific": {
+      "historical_diesel_baseline_liters": 50000,
+      "diesel_2019_liters": 2150,
+      "fossil_fuel_free_since": 2022,
+      "energy_sources_2022": "two-thirds NDSM green grid, remainder batteries",
+      "co2_2018_tonnes": 70,
+      "co2_2019_tonnes": 15,
+      "hydrogen_generator_tested": 2024
+    },
+    "generator_sizing_kVA": {
+      "small_boutique_festival": 25,
+      "food_vendor_zone": 40,
+      "backstage_production": 30,
+      "main_stage": 100,
+      "large_music_festival_total": 1000
+    },
+    "reference_festivals": {
+      "glastonbury": {
+        "attendance": 210000,
+        "peak_demand_kW": 30000,
+        "solar_panels": 1316,
+        "solar_output_kWh_year": 205700,
+        "wind_turbine_kW": 300,
+        "fuel": "HVO (waste cooking oil)"
+      },
+      "roskilde": {
+        "generators": 200,
+        "peak_MW": 30,
+        "diesel_eliminated_liters": 72000,
+        "goal": "CO2e-neutral by 2028"
+      }
+    }
+  },
+
+  "festival_resource_consumption": {
+    "source": "Julie's Bicycle, Powerful Thinking, Metabolic, industry data",
+    "dgtl_visitors": {
+      "total_per_edition": 40000,
+      "per_day": 20000,
+      "duration_days": 2,
+      "duration_2026": 3,
+      "notes": "DGTL 2026 expands to 3 days (April 3-5)"
+    },
+    "food_per_person_per_day": {
+      "low_kg": 1.0,
+      "mid_kg": 1.5,
+      "high_kg": 2.0,
+      "notes": "Festival-goers burn 500-1000 extra kcal/day from dancing/walking, increasing demand above normal 1.0-2.5 kg/day."
+    },
+    "drinks_per_person_per_day": {
+      "alcoholic_drinks_count_low": 3,
+      "alcoholic_drinks_count_mid": 5,
+      "alcoholic_drinks_count_high": 8,
+      "percent_drinking_alcohol": 75,
+      "drinks_per_hour_casual": 1.5,
+      "drinks_per_hour_party": 2.5,
+      "oktoberfest_reference_liters_per_visitor": 1.05,
+      "dgtl_drinks_input_kg": 90000,
+      "dgtl_drinks_per_visitor_kg": 2.25,
+      "notes": "DGTL material flow shows 90,000 kg drinks for 40,000 visitors = 2.25 kg per person."
+    },
+    "water_per_person_per_day_liters": {
+      "drinking_only_low": 1,
+      "drinking_only_mid": 2,
+      "drinking_only_hot_weather": 5,
+      "total_incl_sanitation_low": 8,
+      "total_incl_sanitation_mid": 13,
+      "total_incl_sanitation_high": 18,
+      "food_vendors_per_vendor_per_day": 22
+    },
+    "waste_per_person_per_day_kg": {
+      "julies_bicycle_2014": 2.8,
+      "julies_bicycle_2019": 2.0,
+      "uk_festival_average": 2.0,
+      "with_camping": 3.2,
+      "non_camping_per_visit": 0.7,
+      "dgtl_visitor_waste_kg_total": 3200,
+      "dgtl_visitor_waste_per_person_kg": 0.08,
+      "dgtl_vs_avg_dutch_festival": "7x less waste per attendee",
+      "landfill_rate_average": 0.68,
+      "recycling_rate_average": 0.20,
+      "dgtl_recycling_rate": 0.99
+    },
+    "food_waste_percent": {
+      "average_event": 0.175,
+      "target": 0.12,
+      "dgtl_food_court_2018": "virtually zero"
+    },
+    "sanitation": {
+      "toilets_per_100_people_short_event": 1,
+      "toilets_per_100_people_festival": 3,
+      "extra_if_alcohol_percent": 20,
+      "accessible_ratio": "1 per 4 standard units",
+      "dgtl_toilets": 200,
+      "dgtl_urinals": 60,
+      "dgtl_human_waste_kg": 113400,
+      "dgtl_urine_kg": 93150,
+      "dgtl_faeces_kg": 20250
+    },
+    "co2_per_visitor_per_day_kg": {
+      "onsite_low": 5,
+      "onsite_mid": 11,
+      "incl_travel_high": 25,
+      "travel_share_of_total": 0.70,
+      "food_drink_share": 0.35,
+      "energy_share_of_onsite": 0.65,
+      "waste_share_of_onsite": 0.35
+    }
+  },
+
+  "derived_festival_estimates": {
+    "description": "Quick calculations for DGTL festival energy planning",
+    "assumptions": {
+      "festival_duration_days": 2,
+      "festival_month": "April (typical DGTL timing)",
+      "april_solar_irradiation_kWh_m2_day": 4.36,
+      "usable_roof_area_for_solar_m2": 5000,
+      "panel_efficiency": 0.205
+    },
+    "solar_potential": {
+      "panels_on_5000m2": 2564,
+      "total_peak_kW": 1026,
+      "daily_output_april_kWh": 3642,
+      "festival_2day_output_kWh": 7284,
+      "notes": "5000 m2 roof area x 1.95 m2/panel = 2564 panels x 400W = 1026 kWp. At 3.55 kWh/kWp/day in April = 3642 kWh/day."
+    },
+    "battery_storage": {
+      "powerwalls_for_one_night_50kWh": 4,
+      "megapacks_for_500kWh_buffer": 1,
+      "notes": "One Megapack (4 MWh) would cover significant evening/night demand buffer for festival."
+    }
+  }
+}
