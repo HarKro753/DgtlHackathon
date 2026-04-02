@@ -7,6 +7,7 @@ from utils.energy import (
     HOURS_PER_DAY,
     battery_units_needed,
     calc_renewable_percent,
+    grid_renewable_share,
 )
 
 

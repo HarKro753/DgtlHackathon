@@ -10,7 +10,7 @@ export function buildExportText(plan: FestivalPlan, polygon: PolygonPoint[]): st
   return [
     `# Festival Plan — ${plan.location_name}`,
     `${fmt(plan.area_m2)} m² · ${plan.duration_days} days · Month ${plan.month}`,
-    ``, `Visitors: ${fmt(plan.max_visitors)}`, `Renewable: ${plan.energy.renewable_percent}%`,
+    ``, `Visitors: ${fmt(plan.max_visitors)} per day (${fmt(plan.max_visitors * plan.duration_days)} total)`, `Renewable: ${plan.energy.renewable_percent}%`,
     ``, `## Energy (${fmt(plan.energy.total_supply_kWh)} kWh total)`,
     ...plan.energy.sources.map((s) => `- ${s.name}: ${fmt(s.capacity_kWh)} kWh (${s.share_percent}%)`),
     `H₂ generators: ${plan.energy.hydrogen_generators} · Batteries: ${plan.energy.battery_units} · Grid: ${plan.energy.grid_kw} kW`,

@@ -1,6 +1,6 @@
 """Hourly energy dispatch — determines which source powers each hour."""
 
-from utils.energy import DEMAND_WEIGHTS, DEMAND_TOTAL_WEIGHT, GRID_RENEWABLE_SHARE
+from utils.energy import DEMAND_WEIGHTS, DEMAND_TOTAL_WEIGHT
 
 
 def compute_hourly_mix(
@@ -9,6 +9,7 @@ def compute_hourly_mix(
     hydrogen_kw: float,
     battery_capacity_kwh: float,
     prices: dict[str, float],
+    ren_share: float = 0.40,
 ) -> list[dict]:
     """Dispatch energy sources per hour based on merit order:
     1. Grid is always-on base load
@@ -53,8 +54,8 @@ def compute_hourly_mix(
         result.append({
             "hour": hour,
             "demand": round(demand, 1),
-            "grid_renewable": round(grid_used * GRID_RENEWABLE_SHARE, 1),
-            "grid_fossil": round(grid_used * (1 - GRID_RENEWABLE_SHARE), 1),
+            "grid_renewable": round(grid_used * ren_share, 1),
+            "grid_fossil": round(grid_used * (1 - ren_share), 1),
             "hydrogen": round(h2_used, 1),
             "battery": round(battery_used, 1),
             "price": price,

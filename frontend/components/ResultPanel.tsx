@@ -114,7 +114,10 @@ export function ResultPanel({ plan, loading, error, polygon, onApplyNudge }: Res
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 text-center">
           <div className="text-4xl font-bold">{fmt(plan.max_visitors)}</div>
-          <div className="text-sm text-gray-400 mt-1">visitors</div>
+          <div className="text-sm text-gray-400 mt-1">visitors per day</div>
+          {plan.duration_days > 1 && (
+            <div className="text-xs text-gray-500 mt-0.5">{fmt(plan.max_visitors * plan.duration_days)} total over {plan.duration_days} days</div>
+          )}
         </div>
         <div className={`${renewBg} border border-gray-700 rounded-lg p-5 text-center`}>
           <div className={`text-4xl font-bold ${renewColor}`}>{plan.energy.renewable_percent}%</div>

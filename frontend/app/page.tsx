@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { ResultPanel } from "@/components/ResultPanel";
 import { TweakPanel } from "@/components/TweakPanel";
 import { useFestivalPlanner } from "@/hooks/useFestivalPlanner";
@@ -20,7 +21,10 @@ export default function Home() {
       {/* Header */}
       <header className="px-6 py-3 bg-gray-800 border-b border-gray-700">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold">DGTL Sustainable Event Planner</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-bold">DGTL Sustainable Event Planner</h1>
+            <Link href="/data" className="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-xs text-gray-300">Dataset</Link>
+          </div>
           <div className="flex items-center gap-3">
             <select value={p.duration} onChange={(e) => p.handleDurationChange(Number(e.target.value))} className="bg-gray-700 rounded px-2 py-1 text-sm">
               {[1, 2, 3, 4, 5, 7].map((d) => <option key={d} value={d}>{d} day{d > 1 ? "s" : ""}</option>)}
@@ -38,13 +42,13 @@ export default function Home() {
               onClick={() => p.handleModeChange("visitors")}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${p.mode === "visitors" ? "bg-gray-500 text-white" : "text-gray-400"}`}
             >
-              Max Visitors
+              Set Renewable Target
             </button>
             <button
               onClick={() => p.handleModeChange("renewable")}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${p.mode === "renewable" ? "bg-gray-500 text-white" : "text-gray-400"}`}
             >
-              Max Renewable
+              Set Visitor Target
             </button>
           </div>
 
